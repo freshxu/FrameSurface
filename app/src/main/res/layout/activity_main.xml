@@ -9,8 +9,8 @@
 
     <taylor.lib.framesurfaceview.FrameSurfaceView
         android:id="@+id/sv_frame"
-        android:layout_width="200dp"
-        android:layout_height="200dp"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
@@ -38,40 +38,6 @@
             android:text="start frame animtion by FrameSurfaceView"
             android:textAllCaps="false" />
 
-        <Button
-            android:id="@+id/btn_start_2"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:text="start frame animtion by AnimationDrawable"
-            android:textAllCaps="false" />
-
-        <Button
-            android:id="@+id/btn_decode_stream"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:text="decode bitmap by stream"
-            android:textAllCaps="false" />
-
-        <Button
-            android:id="@+id/btn_decode_resource"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:text="decode bitmap by resource"
-            android:textAllCaps="false" />
-
-        <Button
-            android:id="@+id/btn_rapid_decode"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:text="decode bitmap by rapid decode"
-            android:textAllCaps="false" />
-
-        <Button
-            android:id="@+id/btn_decode_asset"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:text="decode bitmap from assets"
-            android:textAllCaps="false" />
     </LinearLayout>
 
 </android.support.constraint.ConstraintLayout>

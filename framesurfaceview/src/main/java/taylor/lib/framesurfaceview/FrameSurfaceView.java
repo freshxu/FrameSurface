@@ -12,6 +12,7 @@ import android.os.Handler;
 import android.os.HandlerThread;
 import android.util.AttributeSet;
 
+import java.io.IOException;
 import java.io.InputStream;
 import java.util.ArrayList;
 import java.util.List;
@@ -31,7 +32,7 @@ public class FrameSurfaceView extends BaseSurfaceView {
     /**
      * the resources of frame animation
      */
-    private List<Integer> bitmapIds = new ArrayList<>();
+    private List<String> bitmapIds = new ArrayList<>();
     /**
      * the index of bitmap resource which is decoding
      */
@@ -128,7 +129,7 @@ public class FrameSurfaceView extends BaseSurfaceView {
      *
      * @param bitmapIds an array of bitmap resource id
      */
-    public void setBitmapIds(List<Integer> bitmapIds) {
+    public void setBitmapIds(List<String> bitmapIds) {
         if (bitmapIds == null || bitmapIds.size() == 0) {
             return;
         }
@@ -139,10 +140,14 @@ public class FrameSurfaceView extends BaseSurfaceView {
         decodeRunnable = new DecodeRunnable(bitmapIdIndex, bitmapIds, options);
     }
 
-    private void getBitmapDimension(int bitmapId) {
+    private void getBitmapDimension(String bitmapId) {
         final BitmapFactory.Options options = new BitmapFactory.Options();
         options.inJustDecodeBounds = true;
-        BitmapFactory.decodeResource(this.getResources(), bitmapId, options);
+        try {
+            BitmapFactory.decodeStream(getResources().getAssets().open(bitmapId), null, options);
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
         defaultWidth = options.outWidth;
         defaultHeight = options.outHeight;
         srcRect = new Rect(0, 0, defaultWidth, defaultHeight);
@@ -280,13 +285,18 @@ public class FrameSurfaceView extends BaseSurfaceView {
      * @param options
      * @return
      */
-    private Bitmap decodeBitmap(int resId, BitmapFactory.Options options) {
+    private Bitmap decodeBitmap(String resId, BitmapFactory.Options options) {
         options.inScaled = false;
-        InputStream inputStream = getResources().openRawResource(resId);
+        InputStream inputStream = null;
+        try {
+            inputStream = getResources().getAssets().open(resId);
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
         return BitmapFactory.decodeStream(inputStream, null, options);
     }
 
-    private void putDecodedBitmapByReuse(int resId, BitmapFactory.Options options) {
+    private void putDecodedBitmapByReuse(String resId, BitmapFactory.Options options) {
         LinkedBitmap linkedBitmap = getDrawnBitmap();
         if (linkedBitmap == null) {
             linkedBitmap = new LinkedBitmap();
@@ -295,7 +305,7 @@ public class FrameSurfaceView extends BaseSurfaceView {
         putDecodedBitmap(resId, options, linkedBitmap);
     }
 
-    private void putDecodedBitmap(int resId, BitmapFactory.Options options, LinkedBitmap linkedBitmap) {
+    private void putDecodedBitmap(String resId, BitmapFactory.Options options, LinkedBitmap linkedBitmap) {
         Bitmap bitmap = decodeBitmap(resId, options);
         linkedBitmap.bitmap = bitmap;
         try {
@@ -343,10 +353,10 @@ public class FrameSurfaceView extends BaseSurfaceView {
     private class DecodeRunnable implements Runnable {
 
         private int index;
-        private List<Integer> bitmapIds;
+        private List<String> bitmapIds;
         private BitmapFactory.Options options;
 
-        public DecodeRunnable(int index, List<Integer> bitmapIds, BitmapFactory.Options options) {
+        public DecodeRunnable(int index, List<String> bitmapIds, BitmapFactory.Options options) {
             this.index = index;
             this.bitmapIds = bitmapIds;
             this.options = options;
