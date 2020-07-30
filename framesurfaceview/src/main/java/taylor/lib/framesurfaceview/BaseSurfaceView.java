@@ -13,7 +13,7 @@ import android.view.SurfaceHolder;
 import android.view.SurfaceView;
 
 public abstract class BaseSurfaceView extends SurfaceView implements SurfaceHolder.Callback {
-    public static final int DEFAULT_FRAME_DURATION_MILLISECOND = 50;
+    public static final int DEFAULT_FRAME_DURATION_MILLISECOND = 40;
 
     private HandlerThread handlerThread;
     private SurfaceViewHandler handler;

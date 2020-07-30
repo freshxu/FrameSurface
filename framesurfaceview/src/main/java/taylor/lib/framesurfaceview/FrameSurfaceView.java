@@ -26,17 +26,16 @@ public class FrameSurfaceView extends BaseSurfaceView {
     public static final String DECODE_THREAD_NAME = "DecodingThread";
     public static final int INFINITE = -1;
     //-1 means repeat infinitely
-    private int repeatTimes;
-    private int repeatedCount;
+    private int repeatTimes = 0;
 
     /**
      * the resources of frame animation
      */
-    private List<String> bitmapIds = new ArrayList<>();
+    private List<String> bitmapNames = new ArrayList<>();
     /**
      * the index of bitmap resource which is decoding
      */
-    private int bitmapIdIndex;
+    private int bitmapNameIndex;
     /**
      * the index of frame which is drawing
      */
@@ -69,6 +68,7 @@ public class FrameSurfaceView extends BaseSurfaceView {
     private Rect dstRect = new Rect();
     private int defaultWidth;
     private int defaultHeight;
+    private boolean hasSet;
 
     public FrameSurfaceView(Context context) {
         super(context);
@@ -120,31 +120,41 @@ public class FrameSurfaceView extends BaseSurfaceView {
      * @param duration time in milliseconds
      */
     public void setDuration(int duration) {
-        int frameDuration = duration / bitmapIds.size();
+        int frameDuration = duration / bitmapNames.size();
         setFrameDuration(frameDuration);
     }
 
     /**
      * set the materials of frame animation which is an array of bitmap resource id
      *
-     * @param bitmapIds an array of bitmap resource id
+     * @param bitmapNames an array of bitmap resource id
      */
-    public void setBitmapIds(List<String> bitmapIds) {
-        if (bitmapIds == null || bitmapIds.size() == 0) {
+    public void setbitmapNames(List<String> bitmapNames) {
+        if (bitmapNames == null || bitmapNames.size() == 0) {
             return;
         }
-        this.bitmapIds = bitmapIds;
+        this.bitmapNames = bitmapNames;
+        if (!hasSet) {
+            getBitmapDimension(bitmapNames.get(bitmapNameIndex));
+            preloadFrames();
+        }
         //by default, take the first bitmap's dimension into consideration
-        getBitmapDimension(bitmapIds.get(bitmapIdIndex));
-        preloadFrames();
-        decodeRunnable = new DecodeRunnable(bitmapIdIndex, bitmapIds, options);
+        hasSet = true;
+        if (decodeRunnable == null) {
+            decodeRunnable = new DecodeRunnable(bitmapNameIndex, bitmapNames, options);
+        } else {
+            bitmapNameIndex = 0;
+            decodeRunnable.setBitmapNames(bitmapNames);
+            decodeRunnable.setIndex(bitmapNameIndex);
+            decodeRunnable.setOptions(options);
+        }
     }
 
-    private void getBitmapDimension(String bitmapId) {
+    private void getBitmapDimension(String bitmapName) {
         final BitmapFactory.Options options = new BitmapFactory.Options();
         options.inJustDecodeBounds = true;
         try {
-            BitmapFactory.decodeStream(getResources().getAssets().open(bitmapId), null, options);
+            BitmapFactory.decodeStream(getResources().getAssets().open(bitmapName), null, options);
         } catch (IOException e) {
             e.printStackTrace();
         }
@@ -159,8 +169,8 @@ public class FrameSurfaceView extends BaseSurfaceView {
      * load the first several frames of animation before it is started
      */
     private void preloadFrames() {
-        putDecodedBitmap(bitmapIds.get(bitmapIdIndex++), options, new LinkedBitmap());
-        putDecodedBitmap(bitmapIds.get(bitmapIdIndex++), options, new LinkedBitmap());
+        putDecodedBitmap(bitmapNames.get(bitmapNameIndex++), options, new LinkedBitmap());
+        putDecodedBitmap(bitmapNames.get(bitmapNameIndex++), options, new LinkedBitmap());
     }
 
     /**
@@ -178,6 +188,7 @@ public class FrameSurfaceView extends BaseSurfaceView {
         if (handler != null) {
             handler = null;
         }
+        hasSet = false;
     }
 
     @Override
@@ -186,18 +197,11 @@ public class FrameSurfaceView extends BaseSurfaceView {
         if (!isStart()) {
             return;
         }
-        if (!isFinish()) {
+        System.out.println("index  " + frameIndex);
+        if (!isFinish() || repeatTimes == INFINITE) {
             drawOneFrame(canvas);
         } else {
             onFrameAnimationEnd();
-            if (repeatTimes != 0 && repeatTimes == INFINITE) {
-                start();
-            } else if (repeatedCount < repeatTimes) {
-                start();
-                repeatedCount++;
-            } else {
-                repeatedCount = 0;
-            }
         }
     }
 
@@ -209,6 +213,7 @@ public class FrameSurfaceView extends BaseSurfaceView {
     private void drawOneFrame(Canvas canvas) {
         LinkedBitmap linkedBitmap = getDecodedBitmap();
         if (linkedBitmap != null) {
+            System.out.println("draw bitmap %s" + linkedBitmap.name);
             canvas.drawBitmap(linkedBitmap.bitmap, srcRect, dstRect, paint);
         }
         putDrawnBitmap(linkedBitmap);
@@ -235,7 +240,7 @@ public class FrameSurfaceView extends BaseSurfaceView {
      * @return true: animation is finished, false: animation is doing
      */
     private boolean isFinish() {
-        return frameIndex >= bitmapIds.size() - 1;
+        return frameIndex >= bitmapNames.size() - 1;
     }
 
     /**
@@ -281,15 +286,15 @@ public class FrameSurfaceView extends BaseSurfaceView {
     /**
      * decode bitmap by BitmapFactory.decodeStream(), it is about twice faster than BitmapFactory.decodeResource()
      *
-     * @param resId   the bitmap resource
+     * @param fileName the bitmap resource
      * @param options
      * @return
      */
-    private Bitmap decodeBitmap(String resId, BitmapFactory.Options options) {
+    private Bitmap decodeBitmap(String fileName, BitmapFactory.Options options) {
         options.inScaled = false;
         InputStream inputStream = null;
         try {
-            inputStream = getResources().getAssets().open(resId);
+            inputStream = getResources().getAssets().open(fileName);
         } catch (IOException e) {
             e.printStackTrace();
         }
@@ -307,7 +312,9 @@ public class FrameSurfaceView extends BaseSurfaceView {
 
     private void putDecodedBitmap(String resId, BitmapFactory.Options options, LinkedBitmap linkedBitmap) {
         Bitmap bitmap = decodeBitmap(resId, options);
+        linkedBitmap.name = resId;
         linkedBitmap.bitmap = bitmap;
+        System.out.println("put bitmap " + resId);
         try {
             decodedBitmaps.put(linkedBitmap);
         } catch (InterruptedException e) {
@@ -353,12 +360,32 @@ public class FrameSurfaceView extends BaseSurfaceView {
     private class DecodeRunnable implements Runnable {
 
         private int index;
-        private List<String> bitmapIds;
+        private List<String> bitmapNames;
         private BitmapFactory.Options options;
 
-        public DecodeRunnable(int index, List<String> bitmapIds, BitmapFactory.Options options) {
+        public DecodeRunnable(int index, List<String> bitmapNames, BitmapFactory.Options options) {
             this.index = index;
-            this.bitmapIds = bitmapIds;
+            this.bitmapNames = bitmapNames;
+            this.options = options;
+        }
+
+        public int getIndex() {
+            return index;
+        }
+
+        public List<String> getBitmapNames() {
+            return bitmapNames;
+        }
+
+        public void setBitmapNames(List<String> bitmapNames) {
+            this.bitmapNames = bitmapNames;
+        }
+
+        public BitmapFactory.Options getOptions() {
+            return options;
+        }
+
+        public void setOptions(BitmapFactory.Options options) {
             this.options = options;
         }
 
@@ -368,13 +395,27 @@ public class FrameSurfaceView extends BaseSurfaceView {
 
         @Override
         public void run() {
-            putDecodedBitmapByReuse(bitmapIds.get(index), options);
+            System.out.println("decode index " + index);
+            putDecodedBitmapByReuse(bitmapNames.get(index), options);
             index++;
-            if (index < bitmapIds.size()) {
+            if (index < bitmapNames.size()) {
                 handler.post(this);
             } else {
                 index = 0;
+                if (repeatTimes == INFINITE) {
+                    handler.post(this);
+                }
             }
         }
+    }
+
+    public interface AnimationListener {
+        void onAnimationStart();
+
+        void onAnimationEnd();
+
+        void onAnimationCancel();
+
+        void onAnimationRepeat();
     }
 }

@@ -28,6 +28,7 @@ public class MainActivity extends AppCompatActivity  {
 
         listenings = new ArrayList<>();
         for (int i = 10; i < 90; i++) {
+
             listenings.add("huanxing_000" + i + ".webp");
         }
 
@@ -40,17 +41,18 @@ public class MainActivity extends AppCompatActivity  {
                 frameSurfaceView.postDelayed(new Runnable() {
                     @Override
                     public void run() {
-                        frameSurfaceView.setBitmapIds(listenings);
+                        frameSurfaceView.setbitmapNames(listenings);
                         frameSurfaceView.setRepeatTimes(-1);
-                        frameSurfaceView.start();
                         frameSurfaceView.setDuration(3200);
+                        frameSurfaceView.start();
                     }
                 },400);
             }
         });
 
         frameSurfaceView = findViewById(R.id.sv_frame);
-        frameSurfaceView.setBitmapIds(starts);
+        frameSurfaceView.setbitmapNames(starts);
+        frameSurfaceView.setRepeatTimes(1);
         frameSurfaceView.setDuration(400);
 
     }
